@@ -47,24 +47,6 @@ def login():
         else:
             st.error("Invalid username or password.")
 
-# Hairstylist Dashboard
-def hairstylist_dashboard():
-    st.sidebar.title("Hairstylist Menu")
-    menu_choice = st.sidebar.radio(
-        "Options",
-        ["Manage Profile", "View Requests", "Accepted Bookings", "Logout"]
-    )
-
-    if menu_choice == "Manage Profile":
-        manage_hairstylist_profile(st.session_state.user["id"])
-    elif menu_choice == "View Requests":
-        view_requests(st.session_state.user["id"])
-    elif menu_choice == "Accepted Bookings":
-        view_accepted_bookings(st.session_state.user["id"])
-    elif menu_choice == "Logout":
-        st.session_state.user = None
-        st.success("Logged out successfully!")
-
 # Client Dashboard
 def client_dashboard():
     st.sidebar.title("Client Menu")
@@ -78,27 +60,6 @@ def client_dashboard():
     elif menu_choice == "Logout":
         st.session_state.user = None
         st.success("Logged out successfully!")
-
-# Hairstylist: Manage Profile
-def manage_hairstylist_profile(user_id):
-    st.title("👩‍🎨 Manage Hairstylist Profile")
-
-    # Fetch existing profile data if available
-    profile = fetch_hairstylist_profile(user_id)
-
-    name = st.text_input("📛 Hairstylist Name", value=profile["name"] if profile else "")
-    location = st.text_input("🗺️ Location", value=profile["location"] if profile else "")
-    styles = st.text_area("✂️ Hairstyles Offered", value=profile["styles"] if profile else "")
-    salon_price = st.number_input("💰 Price for Salon Service ($)", min_value=0.0, value=profile["salon_price"] if profile else 0.0, step=1.0, format="%.2f")
-    home_price = st.number_input("💰 Price for Home Service ($)", min_value=0.0, value=profile["home_price"] if profile else 0.0, step=1.0, format="%.2f")
-    availability = st.text_area("🕒 Availability", value=profile["availability"] if profile else "")
-
-    if st.button("💾 Save Profile"):
-        if not name or not location or not styles or not availability:
-            st.error("Please complete all required fields to save your profile.")
-        else:
-            add_or_edit_hairstylist(user_id, name, styles, salon_price, home_price, availability, location, None)
-            st.success("Profile updated successfully!")
 
 # Client: View Hairstylists
 def view_hairstylists():
@@ -155,7 +116,7 @@ if st.session_state.user is None:
     elif auth_choice == "Login":
         login()
 else:
-    if st.session_state.user["user_type"] == "hairstylist":
-        hairstylist_dashboard()
-    elif st.session_state.user["user_type"] == "client":
+    if st.session_state.user["user_type"] == "client":
         client_dashboard()
+    else:
+        st.error("You do not have access to this section.")
