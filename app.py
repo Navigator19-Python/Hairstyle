@@ -39,7 +39,7 @@ def signup():
 
 # User Login
 def login():
-    st.subheader("\ud83d\udd11 Login")
+    st.subheader("🔑 Login")  # Replace with "Login" if Unicode still causes issues
     username = st.text_input("Username", key="login_username")
     password = st.text_input("Password", type="password", key="login_password")
     if st.button("Login"):
