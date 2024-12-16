@@ -1,79 +1,161 @@
 import streamlit as st
-from model import *
+from model import (
+    initialize_db,
+    register_user,
+    login_user,
+    fetch_hairstylists,
+    fetch_hairstylist_profile,
+    add_booking,
+    fetch_booking_requests,
+    update_booking_status,
+    add_or_edit_hairstylist,
+)
 
-# User Authentication
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-    st.session_state.user_id = None
-    st.session_state.user_type = None
+# Initialize Database
+initialize_db()
 
-# Login and Registration
-st.sidebar.header("Log In")
-if not st.session_state.logged_in:
-    username = st.sidebar.text_input("Username")
-    password = st.sidebar.text_input("Password", type="password")
-    login_btn = st.sidebar.button("Log In")
-    
-    if login_btn:
+# Streamlit App Layout
+st.title("✨ Hairstylist Booking App ✂️")
+
+# State Management
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+# User Signup
+def signup():
+    st.subheader("👤 Sign Up")
+    username = st.text_input("Username", key="signup_username")
+    password = st.text_input("Password", type="password", key="signup_password")
+    user_type = st.selectbox("User Type", ["hairstylist", "client"], key="signup_user_type")
+    if st.button("Sign Up"):
+        result = register_user(username, password, user_type)
+        if result["success"]:
+            st.success(result["message"])
+        else:
+            st.error(result["message"])
+
+# User Login
+def login():
+    st.subheader("🔑 Login")
+    username = st.text_input("Username", key="login_username")
+    password = st.text_input("Password", type="password", key="login_password")
+    if st.button("Login"):
         user = login_user(username, password)
         if user:
-            st.session_state.logged_in = True
-            st.session_state.user_id = user[0]
-            st.session_state.user_type = user[3]
-            st.sidebar.success("Logged in successfully!")
+            st.session_state.user = user
+            st.success(f"Welcome, {user['username']}! You are logged in as a {user['user_type']}.")
         else:
-            st.sidebar.error("Invalid username or password!")
+            st.error("Invalid username or password.")
+
+# Hairstylist Dashboard
+def hairstylist_dashboard():
+    st.sidebar.title("Hairstylist Menu")
+    menu_choice = st.sidebar.radio(
+        "Options",
+        ["Manage Profile", "View Requests", "Accepted Bookings", "Logout"]
+    )
+
+    if menu_choice == "Manage Profile":
+        manage_hairstylist_profile(st.session_state.user["id"])
+    elif menu_choice == "View Requests":
+        view_requests(st.session_state.user["id"])
+    elif menu_choice == "Accepted Bookings":
+        view_accepted_bookings(st.session_state.user["id"])
+    elif menu_choice == "Logout":
+        st.session_state.user = None
+        st.success("Logged out successfully!")
+
+# Client Dashboard
+def client_dashboard():
+    st.sidebar.title("Client Menu")
+    menu_choice = st.sidebar.radio(
+        "Options",
+        ["View Hairstylists", "Logout"]
+    )
+
+    if menu_choice == "View Hairstylists":
+        view_hairstylists()
+    elif menu_choice == "Logout":
+        st.session_state.user = None
+        st.success("Logged out successfully!")
+
+# Hairstylist: Manage Profile
+def manage_hairstylist_profile(user_id):
+    st.title("👩‍🎨 Manage Hairstylist Profile")
+
+    # Fetch existing profile data if available
+    profile = fetch_hairstylist_profile(user_id)
+
+    name = st.text_input("📛 Hairstylist Name", value=profile["name"] if profile else "")
+    location = st.text_input("🗺️ Location", value=profile["location"] if profile else "")
+    styles = st.text_area("✂️ Hairstyles Offered", value=profile["styles"] if profile else "")
+    salon_price = st.number_input("💰 Price for Salon Service ($)", min_value=0.0, value=profile["salon_price"] if profile else 0.0, step=1.0, format="%.2f")
+    home_price = st.number_input("💰 Price for Home Service ($)", min_value=0.0, value=profile["home_price"] if profile else 0.0, step=1.0, format="%.2f")
+    availability = st.text_area("🕒 Availability", value=profile["availability"] if profile else "")
+
+    if st.button("💾 Save Profile"):
+        if not name or not location or not styles or not availability:
+            st.error("Please complete all required fields to save your profile.")
+        else:
+            add_or_edit_hairstylist(user_id, name, styles, salon_price, home_price, availability, location, None)
+            st.success("Profile updated successfully!")
+
+# Client: View Hairstylists
+def view_hairstylists():
+    st.subheader("🔍 View Hairstylists")
+    location = st.text_input("Search by Location", key="view_location")
+    if st.button("Search", key="search_stylists"):
+        stylists = fetch_hairstylists(location)
+        if stylists:
+            for stylist in stylists:
+                st.markdown(f"""
+                - **Name**: {stylist['name']}
+                - **Location**: {stylist['location']}
+                - **Rating**: {stylist['rating']} ⭐
+                """)
+                if st.button(f"View Full Profile (ID: {stylist['id']})", key=f"profile_{stylist['id']}"):
+                    show_full_profile(stylist["id"])
+                st.write("---")
+        else:
+            st.warning("No hairstylists found.")
+
+# Client: View Full Profile of Hairstylist with Booking Option
+def show_full_profile(hairstylist_id):
+    st.subheader("📋 Hairstylist Full Profile")
+    profile = fetch_hairstylist_profile(hairstylist_id)
+    if profile:
+        st.markdown(f"""
+        - **Name**: {profile['name']}
+        - **Location**: {profile['location']}
+        - **Styles Offered**: {profile['styles']}
+        - **Salon Price**: ${profile['salon_price']}
+        - **Home Service Price**: ${profile['home_price']}
+        - **Availability**: {profile['availability']}
+        """)
+        st.write("---")
+        st.subheader("📅 Book This Hairstylist")
+        client_id = st.session_state.user["id"]
+        date = st.date_input("Booking Date")
+        time = st.time_input("Booking Time")
+        service_type = st.text_input("Service Type")
+        price = st.number_input("Price", min_value=0.0, step=0.01)
+
+        if st.button("Book Now"):
+            add_booking(client_id, hairstylist_id, str(date), str(time), service_type, price)
+            st.success("Booking request submitted successfully!")
+    else:
+        st.error("Profile not found.")
+
+# App Flow
+if st.session_state.user is None:
+    st.sidebar.title("Authentication")
+    auth_choice = st.sidebar.radio("Choose an Option", ["Login", "Sign Up"])
+    if auth_choice == "Sign Up":
+        signup()
+    elif auth_choice == "Login":
+        login()
 else:
-    st.sidebar.success(f"Logged in as {st.session_state.user_type.capitalize()}")
-
-# Hairstylist Profile Management
-if st.session_state.logged_in and st.session_state.user_type == 'hairstylist':
-    st.title("Hairstylist Dashboard")
-    with st.form("profile_form"):
-        name = st.text_input("Name")
-        styles = st.text_area("Describe Your Styles")
-        salon_price = st.number_input("Salon Price", min_value=0.0)
-        home_price = st.number_input("Home Service Price", min_value=0.0)
-        availability = st.text_area("Availability (e.g., Mon-Fri 9am-5pm)")
-        location = st.text_input("Your Location")
-        style_image = st.file_uploader("Upload a Style Image", type=["jpg", "jpeg", "png"])
-        submit = st.form_submit_button("Save Profile")
-        
-        if submit and style_image:
-            image_bytes = style_image.read()
-            add_or_edit_hairstylist(st.session_state.user_id, name, styles, salon_price, home_price, availability, location, image_bytes)
-            st.success("Profile saved successfully!")
-
-# Client Browsing Hairstylists
-if st.session_state.logged_in and st.session_state.user_type == 'client':
-    st.title("Browse Hairstylists")
-    location_filter = st.text_input("Filter by Location (optional)")
-    hairstylists = fetch_hairstylists(location_filter)
-    
-    for stylist in hairstylists:
-        st.subheader(stylist[2])  # Name
-        st.write(f"Styles: {stylist[3]}")
-        st.write(f"Salon Price: ${stylist[4]}, Home Price: ${stylist[5]}")
-        st.write(f"Location: {stylist[7]}")
-        st.image(stylist[8], use_container_width=True)
-        if st.button(f"Book {stylist[2]}"):
-            st.session_state.stylist_id = stylist[0]
-            st.session_state.booking_in_progress = True
-            break
-
-# Handle Booking (Booking Form)
-if st.session_state.get("booking_in_progress"):
-    stylist_id = st.session_state.get("stylist_id")
-    st.title(f"Booking with Stylist {stylist_id}")
-    date = st.date_input("Select Booking Date")
-    time = st.time_input("Select Time")
-    service_type = st.selectbox("Choose Service Type", ["Salon", "Home"])
-    price = fetch_hairstylists()[stylist_id][4] if service_type == "Salon" else fetch_hairstylists()[stylist_id][5]
-    
-    if st.button("Confirm Booking"):
-        cursor.execute('''
-            INSERT INTO bookings (client_id, stylist_id, date, time, service_type, price, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?)''',
-            (st.session_state.user_id, stylist_id, date, time, service_type, price, "pending"))
-        conn.commit()
-        st.success("Booking confirmed!")
+    if st.session_state.user["user_type"] == "hairstylist":
+        hairstylist_dashboard()
+    elif st.session_state.user["user_type"] == "client":
+        client_dashboard()
