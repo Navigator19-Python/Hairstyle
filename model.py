@@ -193,3 +193,15 @@ def update_booking_status(booking_id, status):
         conn.commit()
     finally:
         conn.close()
+
+
+# Fetch hairstylist profile by user ID
+def fetch_hairstylist_profile(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT * FROM hairstylists WHERE user_id = ?', (user_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
