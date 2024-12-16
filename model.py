@@ -171,3 +171,25 @@ def add_booking(client_id, stylist_id, date, time, service_type, price):
         print(f"Error while adding booking: {e}")
     finally:
         conn.close()
+
+def fetch_booking_requests(hairstylist_id, status="pending"):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            SELECT * FROM bookings WHERE stylist_id = ? AND status = ?
+        ''', (hairstylist_id, status))
+        return [dict(row) for row in cursor.fetchall()]
+    finally:
+        conn.close()
+
+def update_booking_status(booking_id, status):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            UPDATE bookings SET status = ? WHERE id = ?
+        ''', (status, booking_id))
+        conn.commit()
+    finally:
+        conn.close()
