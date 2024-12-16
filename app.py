@@ -4,6 +4,7 @@ from model import (
     register_user,
     login_user,
     fetch_hairstylists,
+    fetch_hairstylist_profile,
     add_booking,
     fetch_booking_requests,
     update_booking_status,
@@ -80,85 +81,25 @@ def client_dashboard():
         st.session_state.user = None
         st.success("Logged out successfully!")
 
-# Hairstylist: View Booking Requests
-def view_requests(hairstylist_id):
-    st.subheader("📋 Client Booking Requests")
-    requests = fetch_booking_requests(hairstylist_id, status="pending")
-    if not requests:
-        st.info("You have no pending booking requests.")
-    else:
-        for req in requests:
-            st.markdown(f"""
-            - **Client ID**: {req['client_id']}
-            - **Service Type**: {req['service_type']}
-            - **Booking Date**: {req['date']}
-            - **Booking Time**: {req['time']}
-            - **Offered Price**: ${req['price']}
-            """)
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button(f"✅ Accept Request (ID: {req['id']})"):
-                    update_booking_status(req["id"], "accepted")
-                    st.success("Request accepted!")
-            with col2:
-                if st.button(f"❌ Reject Request (ID: {req['id']})"):
-                    update_booking_status(req["id"], "rejected")
-                    st.warning("Request rejected.")
-            st.write("---")
-
-# Hairstylist: View Accepted Bookings
-def view_accepted_bookings(hairstylist_id):
-    st.subheader("📅 Accepted Bookings")
-    bookings = fetch_booking_requests(hairstylist_id, status="accepted")
-    if not bookings:
-        st.info("You have no accepted bookings.")
-    else:
-        for booking in bookings:
-            st.markdown(f"""
-            - **Client ID**: {booking['client_id']}
-            - **Service Type**: {booking['service_type']}
-            - **Booking Date**: {booking['date']}
-            - **Booking Time**: {booking['time']}
-            - **Price**: ${booking['price']}
-            """)
-            st.write("---")
-
 # Hairstylist: Manage Profile
 def manage_hairstylist_profile(user_id):
-    st.title("👩‍🎨 Hairstylist Profile Setup")
-    st.markdown("Welcome to your hairstylist profile setup! 🌟")
+    st.title("👩‍🎨 Manage Hairstylist Profile")
 
-    # Profile Details
-    location = st.text_input("🗺️ Enter your location (e.g., Downtown, New York)")
-    styles = st.multiselect(
-        "✂️ Select the hairstyles you are capable of making:",
-        ["Braiding", "Haircut", "Hair Coloring", "Weaving", "Dreadlocks", "Extensions", "Relaxing", "Curling"]
-    )
-    salon_price = st.number_input("💰 Price for Salon Service ($)", min_value=0.0, step=1.0, format="%.2f")
-    home_price = st.number_input("💰 Price for Home Service ($)", min_value=0.0, step=1.0, format="%.2f")
-    availability = st.text_area("🕒 Provide your availability (e.g., Mon-Fri, 10am-6pm)")
-    style_images = st.file_uploader("📸 Upload images of your work (Optional)", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
+    # Fetch existing profile data if available
+    profile = fetch_hairstylist_profile(user_id)
 
-    # Save Profile
+    location = st.text_input("🗺️ Location", value=profile["location"] if profile else "")
+    styles = st.text_area("✂️ Hairstyles Offered", value=profile["styles"] if profile else "")
+    salon_price = st.number_input("💰 Price for Salon Service ($)", min_value=0.0, value=profile["salon_price"] if profile else 0.0, step=1.0, format="%.2f")
+    home_price = st.number_input("💰 Price for Home Service ($)", min_value=0.0, value=profile["home_price"] if profile else 0.0, step=1.0, format="%.2f")
+    availability = st.text_area("🕒 Availability", value=profile["availability"] if profile else "")
+
     if st.button("💾 Save Profile"):
         if not location or not styles or not availability:
             st.error("Please complete all required fields to save your profile.")
         else:
-            styles_str = ", ".join(styles)
-            add_or_edit_hairstylist(user_id, "Your Name", styles_str, salon_price, home_price, availability, location, None)
-            st.success("Your profile has been updated successfully! 🎉")
-            st.markdown(f"""
-            ### Your Profile Preview:
-            - **Location**: {location}  
-            - **Hairstyles**: {styles_str}  
-            - **Salon Price**: ${salon_price}  
-            - **Home Service Price**: ${home_price}  
-            - **Availability**: {availability}  
-            """)
-            if style_images:
-                st.markdown("**Uploaded Images:**")
-                for img in style_images:
-                    st.image(img, use_column_width=True)
+            add_or_edit_hairstylist(user_id, "Your Name", styles, salon_price, home_price, availability, location, None)
+            st.success("Profile updated successfully!")
 
 # Client: View Hairstylists
 def view_hairstylists():
@@ -173,9 +114,27 @@ def view_hairstylists():
                 - **Location**: {stylist['location']}
                 - **Rating**: {stylist['rating']} ⭐
                 """)
+                if st.button(f"View Full Profile (ID: {stylist['id']})", key=f"profile_{stylist['id']}"):
+                    show_full_profile(stylist["id"])
                 st.write("---")
         else:
             st.warning("No hairstylists found.")
+
+# Client: View Full Profile of Hairstylist
+def show_full_profile(hairstylist_id):
+    st.subheader("📋 Hairstylist Full Profile")
+    profile = fetch_hairstylist_profile(hairstylist_id)
+    if profile:
+        st.markdown(f"""
+        - **Name**: {profile['name']}
+        - **Location**: {profile['location']}
+        - **Styles Offered**: {profile['styles']}
+        - **Salon Price**: ${profile['salon_price']}
+        - **Home Service Price**: ${profile['home_price']}
+        - **Availability**: {profile['availability']}
+        """)
+    else:
+        st.error("Profile not found.")
 
 # Client: Book a Stylist
 def book_stylist():
