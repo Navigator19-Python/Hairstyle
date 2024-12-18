@@ -1,5 +1,5 @@
 import sqlite3
-import bcrypt
+import hashlib
 
 # Database Connection
 def get_db_connection():
@@ -58,6 +58,10 @@ def initialize_db():
     conn.commit()
     conn.close()
 
+# Password Hashing
+def hash_password(password):
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
 # User Functions
 def register_user(username, password, user_type):
     conn = get_db_connection()
@@ -68,7 +72,7 @@ def register_user(username, password, user_type):
         if cursor.fetchone():
             return {"success": False, "message": "Username already exists."}
 
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        hashed_password = hash_password(password)
         cursor.execute('INSERT INTO users (username, password, user_type) VALUES (?, ?, ?)',
                        (username, hashed_password, user_type))
         conn.commit()
@@ -83,34 +87,9 @@ def login_user(username, password):
     try:
         cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
         user = cursor.fetchone()
-        if user and bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
+        if user and hash_password(password) == user["password"]:
             return dict(user)
         return None
-    finally:
-        conn.close()
-
-# Hairstylist Profile
-def fetch_hairstylist_profile(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute('SELECT * FROM hairstylists WHERE user_id = ?', (user_id,))
-        row = cursor.fetchone()
-        return dict(row) if row else None
-    finally:
-        conn.close()
-
-def add_or_edit_hairstylist(user_id, name, styles, salon_price, home_price, availability, location, image_bytes):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute('''
-            INSERT OR REPLACE INTO hairstylists (user_id, name, styles, salon_price, home_price, availability, location, style_image)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-            (user_id, name, styles, salon_price, home_price, availability, location, image_bytes))
-        conn.commit()
     finally:
         conn.close()
 
@@ -127,19 +106,5 @@ def fetch_hairstylists(location=None):
             params.append(f'%{location}%')
         cursor.execute(query, params)
         return [dict(row) for row in cursor.fetchall()]
-    finally:
-        conn.close()
-
-# Booking Functions
-def add_booking(client_id, stylist_id, date, time, service_type, price):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute('''
-            INSERT INTO bookings (client_id, stylist_id, date, time, service_type, price, status)
-            VALUES (?, ?, ?, ?, ?, ?, 'pending')
-        ''', (client_id, stylist_id, date, time, service_type, price))
-        conn.commit()
     finally:
         conn.close()
