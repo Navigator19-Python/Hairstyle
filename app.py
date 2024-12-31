@@ -1,3 +1,4 @@
+# Updated app.py
 import streamlit as st
 from model import (
     initialize_db,
@@ -30,6 +31,9 @@ def signup():
     password = st.text_input("Password", type="password", key="signup_password")
     user_type = st.selectbox("User Type", ["hairstylist", "client"], key="signup_user_type")
     if st.button("Sign Up"):
+        if not username.isalnum():
+            st.error("Username must be alphanumeric.")
+            return
         result = register_user(username, password, user_type)
         if result["success"]:
             st.success(result["message"])
