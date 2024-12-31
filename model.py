@@ -1,3 +1,4 @@
+# Updated model.py
 import sqlite3
 import hashlib
 from geopy.distance import geodesic
@@ -76,7 +77,8 @@ def initialize_db():
 
 # Password Hashing
 def hash_password(password):
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+    salt = "random_salt_value"  # Replace with a securely generated random salt per user
+    return hashlib.sha256((password + salt).encode('utf-8')).hexdigest()
 
 # User Functions
 def register_user(username, password, user_type):
@@ -145,14 +147,14 @@ def add_booking(client_id, stylist_id, date, time, service_type, price):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute('''
-    SELECT * FROM bookings 
-    WHERE stylist_id = ? AND date = ? AND time = ? AND status = 'confirmed'
-    ''', (stylist_id, date, time))
-    if cursor.fetchone():
-        return {"success": False, "message": "The selected time is unavailable."}
-
     try:
+        cursor.execute('''
+        SELECT * FROM bookings 
+        WHERE stylist_id = ? AND date = ? AND time = ? AND status = 'confirmed'
+        ''', (stylist_id, date, time))
+        if cursor.fetchone():
+            return {"success": False, "message": "The selected time is unavailable."}
+
         cursor.execute('''
         INSERT INTO bookings (client_id, stylist_id, date, time, service_type, price, status)
         VALUES (?, ?, ?, ?, ?, ?, 'pending')
