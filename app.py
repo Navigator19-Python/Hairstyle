@@ -74,7 +74,7 @@ def client_dashboard():
         st.session_state.user = None
         st.success("Logged out successfully!")
         # Instead of rerun, just reset the session and prompt to log in
-        st.experimental_set_query_params()  # Clears the query parameters (optional)
+        st.query_params()  # Clears the query parameters (optional)
         st.info("Please log in again.")
         st.stop()  # Stops further execution
 
