@@ -1,11 +1,9 @@
 import streamlit as st
-from model import (
+from hairstyle_model import (
     initialize_db,
     register_user,
     login_user,
     fetch_hairstylists,
-    fetch_hairstylist_profile,
-    add_booking,
 )
 
 # Initialize Database
