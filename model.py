@@ -1,5 +1,5 @@
 import streamlit as st
-from hairstyle_model import (
+from model import (
     initialize_db,
     register_user,
     login_user,
