@@ -97,21 +97,21 @@ def view_hairstylists():
         else:
             st.warning("No hairstylists found.")
 
-def update_pricing_ui():
+# Hairstylist: Update Pricing
+def update_pricing():
     st.subheader("💰 Update Pricing")
     salon_price = st.number_input("Salon Price", value=0.0)
     home_price = st.number_input("Home Visit Price", value=0.0)
     if st.button("Update Pricing"):
         result = update_pricing(
-            stylist_id=st.session_state.user["id"],
-            salon_price=salon_price,
-            home_price=home_price,
+            stylist_id=st.session_state.user["id"], 
+            salon_price=salon_price, 
+            home_price=home_price
         )
         if result["success"]:
             st.success(result["message"])
         else:
             st.error(result["message"])
-
 
 # App Flow
 if st.session_state.user is None:
