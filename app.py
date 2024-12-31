@@ -1,4 +1,3 @@
-# Updated app.py
 import streamlit as st
 from model import (
     initialize_db,
@@ -8,13 +7,14 @@ from model import (
     add_booking,
     add_review,
     update_pricing,
+    save_profile,  # Assuming save_profile is defined
 )
 
 # Initialize Database
 try:
     initialize_db()
 except Exception as e:
-    st.error(f"Error initializing the database: {e}. Check logs for more details.")
+    st.error("Error initializing the database. Check logs for more details.")
     st.stop()
 
 # Streamlit App Layout
@@ -30,17 +30,10 @@ def signup():
     username = st.text_input("Username", key="signup_username")
     password = st.text_input("Password", type="password", key="signup_password")
     user_type = st.selectbox("User Type", ["hairstylist", "client"], key="signup_user_type")
-    
     if st.button("Sign Up"):
         if not username.isalnum():
             st.error("Username must be alphanumeric.")
             return
-        
-        # Check password strength (example: minimum 6 characters)
-        if len(password) < 6:
-            st.error("Password must be at least 6 characters long.")
-            return
-        
         result = register_user(username, password, user_type)
         if result["success"]:
             st.success(result["message"])
@@ -52,7 +45,6 @@ def login():
     st.subheader("🔑 Login")
     username = st.text_input("Username", key="login_username")
     password = st.text_input("Password", type="password", key="login_password")
-    
     if st.button("Login"):
         user = login_user(username, password)
         if user:
@@ -61,6 +53,7 @@ def login():
         else:
             st.error("Invalid username or password.")
 
+# Client Dashboard
 def client_dashboard():
     st.sidebar.title("Client Menu")
     menu_choice = st.sidebar.radio(
@@ -73,12 +66,11 @@ def client_dashboard():
     elif menu_choice == "Logout":
         st.session_state.user = None
         st.success("Logged out successfully!")
-        # Instead of rerun, just reset the session and prompt to log in
-        st.query_params()  # Clears the query parameters (optional)
+        st.experimental_set_query_params()  # Clears the query parameters (optional)
         st.info("Please log in again.")
         st.stop()  # Stops further execution
 
-# Updated hairstylist_dashboard function to prompt first-time users
+# Hairstylist Dashboard
 def hairstylist_dashboard():
     st.sidebar.title("Hairstylist Menu")
     
@@ -118,7 +110,7 @@ def hairstylist_dashboard():
                 result = save_profile(
                     user_id=st.session_state.user["id"],
                     name=name,
-                    location=location,
+                    location=location.strip().lower(),  # Normalize the location
                     availability=availability,
                     hairstyle_pictures=hairstyle_pictures,
                     prices=prices
@@ -138,52 +130,38 @@ def hairstylist_dashboard():
         # Here, you would display the hairstylist's bookings (this could be another function)
         view_bookings()
     elif menu_choice == "Browse Hairstylists":
-        # Allow hairstylists to browse other hairstylists
         view_hairstylists()
     elif menu_choice == "Logout":
         st.session_state.user = None
         st.success("Logged out successfully!")
-        st.experimental_rerun()  # Redirect to login/signup page
+        st.experimental_set_query_params()  # Clears the query parameters (optional)
+        st.info("Please log in again.")
+        st.stop()  # Stops further execution
 
-# Function to save hairstylist profile data (you need to implement this in the backend)
-def save_profile(user_id, name, location, availability, hairstyle_pictures, prices):
-    try:
-        # Save data to the database
-        # This is just an example, you would need to write the actual logic to save the data
-        # Return a success message if profile is saved correctly
-        return {"success": True, "message": "Profile saved successfully."}
-    except Exception as e:
-        return {"success": False, "message": f"Error saving profile: {e}"}
-
-# Function to view bookings (dummy implementation, to be extended as per your needs)
-def view_bookings():
-    st.subheader("Your Bookings")
-    st.write("Here you can view your upcoming bookings.")
-
-# Client: View Hairstylists
+# Function to view hairstylists (with location search fix)
 def view_hairstylists():
     st.subheader("🔍 View Hairstylists")
-    location = st.text_input("Search by Location", key="view_location")
-    
+    location = st.text_input("Search by Location", key="view_location").strip().lower()  # Normalize input
     if st.button("Search", key="search_stylists"):
         with st.spinner("Loading hairstylists..."):
             stylists = fetch_hairstylists(location)
             if stylists:
                 for stylist in stylists:
-                    st.markdown(f"""
-                    - **Name**: {stylist['name']}
-                    - **Location**: {stylist['location']}
-                    - **Rating**: {stylist['rating']} ⭐
-                    """)
+                    # Normalize saved location for comparison (convert to lower case for case-insensitive matching)
+                    if location in stylist['location'].strip().lower():  
+                        st.markdown(f"""
+                        - **Name**: {stylist['name']}
+                        - **Location**: {stylist['location']}
+                        - **Rating**: {stylist['rating']} ⭐
+                        """)
             else:
                 st.warning("No hairstylists found.")
 
-# Hairstylist: Update Pricing
+# Function to update pricing (for hairstylists)
 def update_pricing():
     st.subheader("💰 Update Pricing")
     salon_price = st.number_input("Salon Price", value=0.0)
     home_price = st.number_input("Home Visit Price", value=0.0)
-    
     if st.button("Update Pricing"):
         result = update_pricing(
             stylist_id=st.session_state.user["id"], 
@@ -194,6 +172,21 @@ def update_pricing():
             st.success(result["message"])
         else:
             st.error(result["message"])
+
+# Function to save hairstylist profile data (you need to implement this in the backend)
+def save_profile(user_id, name, location, availability, hairstyle_pictures, prices):
+    try:
+        # Normalize location before saving
+        location = location.strip().lower()
+        # Save data to the database (your implementation here)
+        return {"success": True, "message": "Profile saved successfully."}
+    except Exception as e:
+        return {"success": False, "message": f"Error saving profile: {e}"}
+
+# Function to view bookings (dummy implementation, to be extended as per your needs)
+def view_bookings():
+    st.subheader("Your Bookings")
+    st.write("Here you can view your upcoming bookings.")
 
 # App Flow
 if st.session_state.user is None:
