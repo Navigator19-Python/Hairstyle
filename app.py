@@ -61,7 +61,6 @@ def login():
         else:
             st.error("Invalid username or password.")
 
-# Client Dashboard
 def client_dashboard():
     st.sidebar.title("Client Menu")
     menu_choice = st.sidebar.radio(
@@ -74,7 +73,10 @@ def client_dashboard():
     elif menu_choice == "Logout":
         st.session_state.user = None
         st.success("Logged out successfully!")
-        st.experimental_rerun()  # Redirect to login/signup page
+        # Instead of rerun, just reset the session and prompt to log in
+        st.experimental_set_query_params()  # Clears the query parameters (optional)
+        st.info("Please log in again.")
+        st.stop()  # Stops further execution
 
 # Updated hairstylist_dashboard function to prompt first-time users
 def hairstylist_dashboard():
