@@ -1,5 +1,5 @@
 import streamlit as st
-from model import (
+from hairstyle_model import (
     initialize_db,
     register_user,
     login_user,
@@ -60,6 +60,20 @@ def client_dashboard():
         st.session_state.user = None
         st.success("Logged out successfully!")
 
+# Hairstylist Dashboard
+def hairstylist_dashboard():
+    st.sidebar.title("Hairstylist Menu")
+    menu_choice = st.sidebar.radio(
+        "Options",
+        ["Manage Profile", "Logout"]
+    )
+
+    if menu_choice == "Manage Profile":
+        manage_profile()
+    elif menu_choice == "Logout":
+        st.session_state.user = None
+        st.success("Logged out successfully!")
+
 # Client: View Hairstylists
 def view_hairstylists():
     st.subheader("🔍 View Hairstylists")
@@ -76,6 +90,11 @@ def view_hairstylists():
         else:
             st.warning("No hairstylists found.")
 
+# Hairstylist: Manage Profile
+def manage_profile():
+    st.subheader("✏️ Manage Profile")
+    st.text("Feature not implemented yet. Add functionality to update profile, styles, prices, etc.")
+
 # App Flow
 if st.session_state.user is None:
     st.sidebar.title("Authentication")
@@ -87,5 +106,7 @@ if st.session_state.user is None:
 else:
     if st.session_state.user["user_type"] == "client":
         client_dashboard()
+    elif st.session_state.user["user_type"] == "hairstylist":
+        hairstylist_dashboard()
     else:
-        st.error("You do not have access to this section.")
+        st.error("Unknown user type. Please contact support.")
