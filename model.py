@@ -1,7 +1,6 @@
-# Updated model.py
 import sqlite3
 import hashlib
-from geopy.distance import geodesic
+from geopy.geocoders import Nominatim  # To convert location to latitude/longitude
 
 # Database Connection
 def get_db_connection():
@@ -111,7 +110,36 @@ def login_user(username, password):
     finally:
         conn.close()
 
+# Helper function to geocode a location (convert location to latitude/longitude)
+def geocode_location(location):
+    geolocator = Nominatim(user_agent="hairstylist_app")
+    location = geolocator.geocode(location)
+    if location:
+        return location.latitude, location.longitude
+    return None, None
+
 # Hairstylist Management
+def save_hairstylist_profile(user_id, name, location, availability, salon_price, home_price, style_images):
+    latitude, longitude = geocode_location(location)
+    if latitude is None or longitude is None:
+        return {"success": False, "message": "Invalid location, unable to geocode."}
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute('''
+        INSERT INTO hairstylists (user_id, name, location, latitude, longitude, availability, salon_price, home_price, style_image)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, name, location, latitude, longitude, availability, salon_price, home_price, style_images))
+        conn.commit()
+        return {"success": True, "message": "Profile saved successfully."}
+    except Exception as e:
+        return {"success": False, "message": f"Error saving profile: {e}"}
+    finally:
+        conn.close()
+
+# Fetch Hairstylists with Location Search
 def fetch_hairstylists(location=None):
     conn = get_db_connection()
     cursor = conn.cursor()
