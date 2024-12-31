@@ -76,20 +76,87 @@ def client_dashboard():
         st.success("Logged out successfully!")
         st.experimental_rerun()  # Redirect to login/signup page
 
-# Hairstylist Dashboard
+# Updated hairstylist_dashboard function to prompt first-time users
 def hairstylist_dashboard():
     st.sidebar.title("Hairstylist Menu")
+    
+    # Add a navigation sidebar for the hairstylist
     menu_choice = st.sidebar.radio(
         "Options",
-        ["Manage Profile", "Logout"]
+        ["Manage Profile", "View Bookings", "Browse Hairstylists", "Logout"]
     )
 
-    if menu_choice == "Manage Profile":
-        update_pricing()
+    # If it's the first time the hairstylist is logging in
+    if "has_profile" not in st.session_state.user:
+        st.session_state.user["has_profile"] = False
+
+    if not st.session_state.user["has_profile"]:
+        st.subheader("👤 Complete Your Profile")
+        name = st.text_input("Full Name", key="name")
+        location = st.text_input("Location", key="location")
+        availability = st.selectbox("Availability", ["Salon", "Home Visit", "Both"], key="availability")
+        
+        # Upload hairstyle pictures and set their prices for both services
+        hairstyle_pictures = []
+        prices = {"salon_price": 0.0, "home_price": 0.0}
+        num_pictures = st.number_input("Number of Hairstyles to Upload", min_value=1, max_value=10, key="num_pictures")
+
+        for i in range(num_pictures):
+            picture = st.file_uploader(f"Upload Hairstyle {i+1}", type=["jpg", "png"], key=f"hairstyle_{i}")
+            if picture:
+                hairstyle_pictures.append(picture)
+            salon_price = st.number_input(f"Salon Price for Hairstyle {i+1}", value=0.0, key=f"salon_price_{i}")
+            home_price = st.number_input(f"Home Visit Price for Hairstyle {i+1}", value=0.0, key=f"home_price_{i}")
+            prices["salon_price"] = salon_price
+            prices["home_price"] = home_price
+
+        if st.button("Save Profile"):
+            if name and location and availability and hairstyle_pictures:
+                # Save the profile info to the database (assuming a function save_profile exists)
+                result = save_profile(
+                    user_id=st.session_state.user["id"],
+                    name=name,
+                    location=location,
+                    availability=availability,
+                    hairstyle_pictures=hairstyle_pictures,
+                    prices=prices
+                )
+                if result["success"]:
+                    st.session_state.user["has_profile"] = True
+                    st.success("Profile updated successfully!")
+                else:
+                    st.error(result["message"])
+            else:
+                st.error("Please fill in all required fields and upload at least one hairstyle image.")
+
+    # Navigation logic for when the profile is already created
+    elif menu_choice == "Manage Profile":
+        update_pricing()  # Allow hairstylist to update prices if profile is complete
+    elif menu_choice == "View Bookings":
+        # Here, you would display the hairstylist's bookings (this could be another function)
+        view_bookings()
+    elif menu_choice == "Browse Hairstylists":
+        # Allow hairstylists to browse other hairstylists
+        view_hairstylists()
     elif menu_choice == "Logout":
         st.session_state.user = None
         st.success("Logged out successfully!")
         st.experimental_rerun()  # Redirect to login/signup page
+
+# Function to save hairstylist profile data (you need to implement this in the backend)
+def save_profile(user_id, name, location, availability, hairstyle_pictures, prices):
+    try:
+        # Save data to the database
+        # This is just an example, you would need to write the actual logic to save the data
+        # Return a success message if profile is saved correctly
+        return {"success": True, "message": "Profile saved successfully."}
+    except Exception as e:
+        return {"success": False, "message": f"Error saving profile: {e}"}
+
+# Function to view bookings (dummy implementation, to be extended as per your needs)
+def view_bookings():
+    st.subheader("Your Bookings")
+    st.write("Here you can view your upcoming bookings.")
 
 # Client: View Hairstylists
 def view_hairstylists():
