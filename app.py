@@ -7,7 +7,7 @@ from model import (
     add_booking,
     add_review,
     update_pricing,
-    save_profile,  # Assuming save_profile is defined
+    save_hairstylist_profile,  # Assuming save_profile is defined
 )
 
 # Initialize Database
