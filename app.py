@@ -132,9 +132,9 @@ def hairstylist_dashboard():
     elif menu_choice == "Browse Hairstylists":
         view_hairstylists()
     elif menu_choice == "Logout":
-        st.session_state.user = None
-        st.success("Logged out successfully!")
-        st.experimental_set_query_params()  # Clears the query parameters (optional)
+    st.session_state.user = None  # Clear the logged-in user
+    st.success("Logged out successfully!")
+    st.experimental_rerun()  # Force the app to rerun and show the login/signup page  # Clears the query parameters (optional)
         st.info("Please log in again.")
         st.stop()  # Stops further execution
 
