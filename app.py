@@ -7,7 +7,7 @@ from model import (
     add_booking,
     add_review,
     update_pricing,
-    save_hairstylist_profile,  # Assuming save_profile is defined
+    save_hairstylist_profile,  # Corrected import
 )
 
 # Initialize Database
@@ -66,124 +66,73 @@ def client_dashboard():
     elif menu_choice == "Logout":
         st.session_state.user = None
         st.success("Logged out successfully!")
-        st.experimental_set_query_params()  # Clears the query parameters (optional)
-        st.info("Please log in again.")
-        st.stop()  # Stops further execution
+        st.experimental_rerun()  # Ensures the app returns to the login/signup page
 
 # Hairstylist Dashboard
 def hairstylist_dashboard():
     st.sidebar.title("Hairstylist Menu")
-    
-    # Add a navigation sidebar for the hairstylist
     menu_choice = st.sidebar.radio(
         "Options",
         ["Manage Profile", "View Bookings", "Browse Hairstylists", "Logout"]
     )
 
-    # If it's the first time the hairstylist is logging in
-    if "has_profile" not in st.session_state.user:
-        st.session_state.user["has_profile"] = False
-
-    if not st.session_state.user["has_profile"]:
-        st.subheader("👤 Complete Your Profile")
-        name = st.text_input("Full Name", key="name")
-        location = st.text_input("Location", key="location")
-        availability = st.selectbox("Availability", ["Salon", "Home Visit", "Both"], key="availability")
-        
-        # Upload hairstyle pictures and set their prices for both services
-        hairstyle_pictures = []
-        prices = {"salon_price": 0.0, "home_price": 0.0}
-        num_pictures = st.number_input("Number of Hairstyles to Upload", min_value=1, max_value=10, key="num_pictures")
-
-        for i in range(num_pictures):
-            picture = st.file_uploader(f"Upload Hairstyle {i+1}", type=["jpg", "png"], key=f"hairstyle_{i}")
-            if picture:
-                hairstyle_pictures.append(picture)
-            salon_price = st.number_input(f"Salon Price for Hairstyle {i+1}", value=0.0, key=f"salon_price_{i}")
-            home_price = st.number_input(f"Home Visit Price for Hairstyle {i+1}", value=0.0, key=f"home_price_{i}")
-            prices["salon_price"] = salon_price
-            prices["home_price"] = home_price
-
-        if st.button("Save Profile"):
-            if name and location and availability and hairstyle_pictures:
-                # Save the profile info to the database (assuming a function save_profile exists)
-                result = save_profile(
-                    user_id=st.session_state.user["id"],
-                    name=name,
-                    location=location.strip().lower(),  # Normalize the location
-                    availability=availability,
-                    hairstyle_pictures=hairstyle_pictures,
-                    prices=prices
-                )
-                if result["success"]:
-                    st.session_state.user["has_profile"] = True
-                    st.success("Profile updated successfully!")
-                else:
-                    st.error(result["message"])
-            else:
-                st.error("Please fill in all required fields and upload at least one hairstyle image.")
-
-    # Navigation logic for when the profile is already created
-    elif menu_choice == "Manage Profile":
-        update_pricing()  # Allow hairstylist to update prices if profile is complete
+    if menu_choice == "Manage Profile":
+        manage_profile()
     elif menu_choice == "View Bookings":
-        # Here, you would display the hairstylist's bookings (this could be another function)
         view_bookings()
     elif menu_choice == "Browse Hairstylists":
         view_hairstylists()
     elif menu_choice == "Logout":
-    st.session_state.user = None  # Clear the logged-in user
-    st.success("Logged out successfully!")
-    st.experimental_rerun()  # Force the app to rerun and show the login/signup page  # Clears the query parameters (optional)
-        st.info("Please log in again.")
-        st.stop()  # Stops further execution
+        st.session_state.user = None
+        st.success("Logged out successfully!")
+        st.experimental_rerun()
 
-# Function to view hairstylists (with location search fix)
+# Manage Profile for Hairstylist
+def manage_profile():
+    st.subheader("👤 Manage Your Profile")
+    name = st.text_input("Full Name")
+    location = st.text_input("Location")
+    availability = st.selectbox("Availability", ["Salon", "Home Visit", "Both"])
+    salon_price = st.number_input("Salon Price", value=0.0)
+    home_price = st.number_input("Home Visit Price", value=0.0)
+    style_images = st.file_uploader("Upload Hairstyle Images", accept_multiple_files=True)
+
+    if st.button("Save Profile"):
+        if name and location and availability and style_images:
+            result = save_hairstylist_profile(
+                user_id=st.session_state.user["id"],
+                name=name,
+                location=location.strip().lower(),
+                availability=availability,
+                salon_price=salon_price,
+                home_price=home_price,
+                style_images=style_images
+            )
+            if result["success"]:
+                st.success(result["message"])
+            else:
+                st.error(result["message"])
+        else:
+            st.error("Please fill in all required fields.")
+
+# Function to view hairstylists
 def view_hairstylists():
     st.subheader("🔍 View Hairstylists")
-    location = st.text_input("Search by Location", key="view_location").strip().lower()  # Normalize input
-    if st.button("Search", key="search_stylists"):
+    location = st.text_input("Search by Location").strip().lower()
+    if st.button("Search"):
         with st.spinner("Loading hairstylists..."):
             stylists = fetch_hairstylists(location)
             if stylists:
                 for stylist in stylists:
-                    # Normalize saved location for comparison (convert to lower case for case-insensitive matching)
-                    if location in stylist['location'].strip().lower():  
-                        st.markdown(f"""
-                        - **Name**: {stylist['name']}
-                        - **Location**: {stylist['location']}
-                        - **Rating**: {stylist['rating']} ⭐
-                        """)
+                    st.markdown(f"""
+                    - **Name**: {stylist['name']}
+                    - **Location**: {stylist['location']}
+                    - **Rating**: {stylist['rating']} ⭐
+                    """)
             else:
                 st.warning("No hairstylists found.")
 
-# Function to update pricing (for hairstylists)
-def update_pricing():
-    st.subheader("💰 Update Pricing")
-    salon_price = st.number_input("Salon Price", value=0.0)
-    home_price = st.number_input("Home Visit Price", value=0.0)
-    if st.button("Update Pricing"):
-        result = update_pricing(
-            stylist_id=st.session_state.user["id"], 
-            salon_price=salon_price, 
-            home_price=home_price
-        )
-        if result["success"]:
-            st.success(result["message"])
-        else:
-            st.error(result["message"])
-
-# Function to save hairstylist profile data (you need to implement this in the backend)
-def save_profile(user_id, name, location, availability, hairstyle_pictures, prices):
-    try:
-        # Normalize location before saving
-        location = location.strip().lower()
-        # Save data to the database (your implementation here)
-        return {"success": True, "message": "Profile saved successfully."}
-    except Exception as e:
-        return {"success": False, "message": f"Error saving profile: {e}"}
-
-# Function to view bookings (dummy implementation, to be extended as per your needs)
+# Function to view bookings
 def view_bookings():
     st.subheader("Your Bookings")
     st.write("Here you can view your upcoming bookings.")
@@ -196,6 +145,7 @@ if st.session_state.user is None:
         signup()
     elif auth_choice == "Login":
         login()
+    st.stop()
 else:
     if st.session_state.user["user_type"] == "client":
         client_dashboard()
