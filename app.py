@@ -64,11 +64,9 @@ def client_dashboard():
     if menu_choice == "View Hairstylists":
         view_hairstylists()
     elif menu_choice == "Logout":
-        st.session_state.user = None
-        st.success("Logged out successfully!")
-        st.experimental_set_query_params()  # Clears the query parameters (optional)
-        st.info("Please log in again.")
-        st.stop()  # Stops further execution
+    st.session_state['user'] = None
+    st.session_state['is_logged_in'] = False
+    st.success("You have been logged out.")
 
 # Hairstylist Dashboard
 def hairstylist_dashboard():
